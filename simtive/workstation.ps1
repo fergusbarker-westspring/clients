@@ -4,33 +4,60 @@
 $rmmURI = "https://app.atera.com/breeze/GenericTicketing/GetAgentSetupMSI?customerId=90&customerName=Simitive%20Limited&folderId=265&folderName=Workstations&integratorLogin=fergusbarker@westspring-it.co.uk&accountId=0013z00002WJbquAAD"
 $rmmArgs = "/qn IntegratorLogin=fergusbarker@westspring-it.co.uk CompanyId=90 AccountId=0013z00002WJbquAAD FolderId=265"
 
+# Define Functions
+# Function to download and install the latest version of winget
+function Install-Winget {
+    Write-Host "Downloading and installing the latest version of winget..."
+    $wingetURI = "https://aka.ms/getwinget"
+    try {
+        Invoke-RestMethod -Uri $wingetURI -OutFile $env:TMP\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
+        Add-AppxPackage -Path $env:TMP\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle
+        Write-Host "winget installed successfully."
+    }
+    catch {
+        Write-Host "Failed to download or install winget." -ForegroundColor Red
+        $cont = Read-Host "Do you want to continue? (yes/no)"
+        If ($cont -eq "no") { Exit 1 } else { $cont = $null }
+    }
+}
 
 # Check for internet connection
-    $internetConnection = Test-Connection -ComputerName ([System.Uri]$rmmURI).Host -Count 1 -Quiet
-    if (!($internetConnection)) {
+$internetConnection = Test-Connection -ComputerName ([System.Uri]$rmmURI).Host -Count 1 -Quiet
+if (!($internetConnection)) {
     # Warn the user about the lack of internet connection
-    Write-Host "No internet connection detected. Please connect to a network."}
+    Write-Host "No internet connection detected. Please connect to a network."
+}
        
 # Download and run the RMM agent installer
 Write-Host "Downloading and running the RMM agent installer..."
 try {
-    Invoke-RestMethod -Uri $rmmURI -OutFile $env:TMP\setup.msi
-    msiexec.exe /i $env:TMP\setup.msi /qn
-} catch {
-    Write-Host "Failed to download or run the RMM agent installer." -ForegroundColor Red
-    exit 1
+    $process = Start-Process msiexec.exe -ArgumentList "/i $env:TMP\setup.msi $rmmArgs" -Wait -PassThru
+    if ($process.ExitCode -ne 0) {
+        throw "MSI installation failed with exit code: $($process.ExitCode)"
+    } else {
+        Write-Host "RMM agent installed successfully."
+        # Remove the installer file
+        Remove-Item -Path "$env:TMP\setup.msi" -Force -ErrorAction SilentlyContinue
+    }
 }
+catch {
+    Write-Host "Failed to download or run the RMM agent installer." -ForegroundColor Red
+    $cont = Read-Host "Do you want to continue? (yes/no)"
+    If ($cont -eq "no") { Exit 1 } else { $cont = $null }    
+}
+
 
 # Ask the user if the device is to be imported to Intune Autopilot
 $importToIntune = Read-Host "Do you want to import this device to Intune Autopilot? (yes/no)"
-        if ($importToIntune -eq "yes") {
-            # Install the Get-WindowsAutoPilotInfo script
-            Install-Script -Name Get-WindowsAutoPilotInfo -Force
+if ($importToIntune -eq "yes") {
+    # Install the Get-WindowsAutoPilotInfo script
+    Install-Script -Name Get-WindowsAutoPilotInfo -Force
 
-            # Run the Get-WindowsAutoPilotInfo script and export the hash file to C:\HWID
-            Write-Host "Running Get-WindowsAutoPilotInfo script and exporting hash file to C:\HWID..."
-            Get-WindowsAutoPilotInfo -OutputFile "C:\HWID\AutoPilotHWID.csv"
-        } else {
+    # Run the Get-WindowsAutoPilotInfo script and export the hash file to C:\HWID
+    Write-Host "Running Get-WindowsAutoPilotInfo script and exporting hash file to C:\HWID..."
+    Get-WindowsAutoPilotInfo -OutputFile "C:\HWID\AutoPilotHWID.csv"
+}
+else {
     Write-Host "Device will not be imported to Intune Autopilot."
 }
 
