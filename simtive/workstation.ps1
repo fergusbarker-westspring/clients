@@ -1,8 +1,9 @@
 # Download and run the script using: irm https://domain.com/path/to/script.ps1 | iex
 
 # Define the URL for the RMM agent installer
-$rmmURI = "https://WS779030.servicedesk.atera.com/GetAgent/Msi/?customerId=90&customerName=Simitive%20Limited&folderId=265&folderName=Workstations&integratorLogin=fergusbarker%40westspring-it.co.uk&accountId=0013z00002WJbquAAD"
+$rmmURI = "https://app.atera.com/breeze/GenericTicketing/GetAgentSetupMSI?customerId=90&customerName=Simitive%20Limited&folderId=265&folderName=Workstations&integratorLogin=fergusbarker@westspring-it.co.uk&accountId=0013z00002WJbquAAD"
 $rmmArgs = "/qn IntegratorLogin=fergusbarker@westspring-it.co.uk CompanyId=90 AccountId=0013z00002WJbquAAD FolderId=265"
+
 
 # Check for internet connection
     $internetConnection = Test-Connection -ComputerName ([System.Uri]$rmmURI).Host -Count 1 -Quiet
@@ -13,7 +14,8 @@ $rmmArgs = "/qn IntegratorLogin=fergusbarker@westspring-it.co.uk CompanyId=90 Ac
 # Download and run the RMM agent installer
 Write-Host "Downloading and running the RMM agent installer..."
 try {
-    curl.exe -L -o setup.msi $rmmURI; msiexec /i setup.msi $rmmArgs
+    Invoke-RestMethod -Uri $rmmURI -OutFile $env:TMP\setup.msi
+    msiexec.exe /i $env:TMP\setup.msi $rmmArgs
 } catch {
     Write-Host "Failed to download or run the RMM agent installer." -ForegroundColor Red
     exit 1
