@@ -15,7 +15,7 @@ $rmmArgs = "/qn IntegratorLogin=fergusbarker@westspring-it.co.uk CompanyId=90 Ac
 Write-Host "Downloading and running the RMM agent installer..."
 try {
     Invoke-RestMethod -Uri $rmmURI -OutFile $env:TMP\setup.msi
-    msiexec.exe /i $env:TMP\setup.msi $rmmArgs
+    msiexec.exe /i $env:TMP\setup.msi /qn
 } catch {
     Write-Host "Failed to download or run the RMM agent installer." -ForegroundColor Red
     exit 1
