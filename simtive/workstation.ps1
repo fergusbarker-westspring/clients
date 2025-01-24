@@ -1,13 +1,19 @@
 # Download and run the script using: irm https://domain.com/path/to/script.ps1 | iex
 
 # Define the URL for the RMM agent installer
-$rmmURI = "https://domain.com/path/to/rmm/installer.exe"
+$rmmURI = "https://WS779030.servicedesk.atera.com/GetAgent/Msi/?customerId=90&customerName=Simitive%20Limited&folderId=265&folderName=Workstations&integratorLogin=fergusbarker%40westspring-it.co.uk&accountId=0013z00002WJbquAAD"
+$rmmArgs = "/qn IntegratorLogin=fergusbarker@westspring-it.co.uk CompanyId=90 AccountId=0013z00002WJbquAAD FolderId=265"
 
+# Check for internet connection
+    $internetConnection = Test-Connection -ComputerName ([System.Uri]$rmmURI).Host -Count 1 -Quiet
+    if (!($internetConnection)) {
+    # Warn the user about the lack of internet connection
+    Write-Host "No internet connection detected. Please connect to a network."}
+       
 # Download and run the RMM agent installer
 Write-Host "Downloading and running the RMM agent installer..."
 try {
-    Invoke-WebRequest -Uri $rmmURI -OutFile "$env:TEMP\installer.exe"
-    Start-Process -FilePath "$env:TEMP\installer.exe" -Wait
+    curle.exe -L -o setup.msi $rmmURI; msiexec /i setup.msi $rmmArgs
 } catch {
     Write-Host "Failed to download or run the RMM agent installer." -ForegroundColor Red
     exit 1
@@ -15,26 +21,7 @@ try {
 
 # Ask the user if the device is to be imported to Intune Autopilot
 $importToIntune = Read-Host "Do you want to import this device to Intune Autopilot? (yes/no)"
-
-if ($importToIntune -eq "yes") {
-    # Check for internet connection
-    $internetConnection = Test-Connection -ComputerName ([System.Uri]$rmmURI).Host -Count 1 -Quiet
-
-    if ($internetConnection) {
-        # Install the Get-WindowsAutoPilotInfo script
-        Install-Script -Name Get-WindowsAutoPilotInfo -Force
-
-        # Run the Get-WindowsAutoPilotInfo script with the -Online flag
-        Write-Host "Running Get-WindowsAutoPilotInfo script..."
-        Get-WindowsAutoPilotInfo -Online
-    } else {
-        # Warn the user about the lack of internet connection
-        Write-Host "No internet connection detected. Please connect to a network."
-
-        # Ask the user if they want to continue anyway
-        $continueAnyway = Read-Host "Do you want to continue anyway? (yes/no)"
-
-        if ($continueAnyway -eq "yes") {
+        if ($importToIntune -eq "yes") {
             # Install the Get-WindowsAutoPilotInfo script
             Install-Script -Name Get-WindowsAutoPilotInfo -Force
 
@@ -42,11 +29,6 @@ if ($importToIntune -eq "yes") {
             Write-Host "Running Get-WindowsAutoPilotInfo script and exporting hash file to C:\HWID..."
             Get-WindowsAutoPilotInfo -OutputFile "C:\HWID\AutoPilotHWID.csv"
         } else {
-            Write-Host "Operation cancelled by user."
-            exit 1
-        }
-    }
-} else {
     Write-Host "Device will not be imported to Intune Autopilot."
 }
 
