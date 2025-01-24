@@ -13,7 +13,7 @@ $rmmArgs = "/qn IntegratorLogin=fergusbarker@westspring-it.co.uk CompanyId=90 Ac
 # Download and run the RMM agent installer
 Write-Host "Downloading and running the RMM agent installer..."
 try {
-    curle.exe -L -o setup.msi $rmmURI; msiexec /i setup.msi $rmmArgs
+    curl.exe -L -o setup.msi $rmmURI; msiexec /i setup.msi $rmmArgs
 } catch {
     Write-Host "Failed to download or run the RMM agent installer." -ForegroundColor Red
     exit 1
