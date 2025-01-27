@@ -3,6 +3,9 @@
 # Define the URL for the RMM agent installer
 $rmmURI = "https://app.atera.com/breeze/GenericTicketing/GetAgentSetupMSI?customerId=90&customerName=Simitive%20Limited&folderId=265&folderName=Workstations&integratorLogin=fergusbarker@westspring-it.co.uk&accountId=0013z00002WJbquAAD"
 $rmmArgs = "/qn IntegratorLogin=fergusbarker@westspring-it.co.uk CompanyId=90 AccountId=0013z00002WJbquAAD FolderId=265"
+$clientName = [System.Web.HttpUtility]::UrlDecode($rmmURI.Split("customerName=")[1].Split("&")[0])
+$clientFolder = [System.Web.HttpUtility]::UrlDecode($rmmURI.Split("folderName=")[1].Split("&")[0])
+
 
 # Define Functions
 # Function to download and install the latest version of winget
@@ -25,12 +28,21 @@ function Install-Winget {
 $internetConnection = Test-Connection -ComputerName ([System.Uri]$rmmURI).Host -Count 1 -Quiet
 if (!($internetConnection)) {
     # Warn the user about the lack of internet connection
-    Write-Host "No internet connection detected. Please connect to a network."
+    Write-Host "Unable to connect to the internet. Please check your connection and try again." -ForegroundColor Red
+} else {
+    Write-Host "Internet connection is available, proceeding..." -ForegroundColor Green
 }
        
 # Download and run the RMM agent installer
 Write-Host "Downloading and running the RMM agent installer..."
 try {
+    Write-Host "Downloading the RMM agent installer for '$clientName' in '$clientFolder'..."
+    Invoke-WebRequest -Uri $rmmURI -OutFile $env:TMP\setup.msi
+    # Check if the MSI file exists
+    if (!(Test-Path -Path $env:TMP\setup.msi)) {
+        throw "Failed to download the RMM agent installer."
+        Exit 1
+    } else {
     $process = Start-Process msiexec.exe -ArgumentList "/i $env:TMP\setup.msi $rmmArgs" -Wait -PassThru
     if ($process.ExitCode -ne 0) {
         throw "MSI installation failed with exit code: $($process.ExitCode)"
@@ -39,7 +51,7 @@ try {
         # Remove the installer file
         Remove-Item -Path "$env:TMP\setup.msi" -Force -ErrorAction SilentlyContinue
     }
-}
+}}
 catch {
     Write-Host "Failed to download or run the RMM agent installer." -ForegroundColor Red
     $cont = Read-Host "Do you want to continue? (yes/no)"
